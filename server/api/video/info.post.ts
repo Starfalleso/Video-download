@@ -55,6 +55,16 @@ export default defineEventHandler(async (event) => {
     url = await expandUrl(url)
   }
 
+  // Re-sanitize expanded URL to block SSRF via redirect chains
+  try {
+    url = sanitizeUrl(url)
+  } catch {
+    throw createError({
+      statusCode: 400,
+      message: 'Expanded URL is invalid or targets a blocked destination.',
+    })
+  }
+
   // Validate supported platform
   const platform = detectServerPlatform(url)
   if (!platform) {
@@ -77,9 +87,15 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // Sanitize error output — never leak raw stderr to the client
+    const safeMessage = err.message?.includes('is not a valid URL')
+      || err.message?.includes('Unsupported URL')
+      ? 'This URL is not supported or could not be processed.'
+      : 'Failed to fetch video information.'
+
     throw createError({
       statusCode: 500,
-      message: err.stderr || err.message || 'Failed to fetch video information.',
+      message: safeMessage,
     })
   }
 })

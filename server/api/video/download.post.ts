@@ -25,14 +25,6 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Concurrent download limit — max 3 simultaneous downloads per IP
-  if (!acquireDownloadSlot(ip)) {
-    throw createError({
-      statusCode: 429,
-      message: 'Too many simultaneous downloads. Please wait for a current download to finish.',
-    })
-  }
-
   const body = await readBody<{ url?: string; formatId?: string; audioOnly?: boolean }>(event)
 
   if (!body?.url || typeof body.url !== 'string') {
@@ -68,6 +60,16 @@ export default defineEventHandler(async (event) => {
     finalUrl = await expandUrl(url)
   }
 
+  // Re-sanitize the expanded URL to block SSRF via redirect chains
+  try {
+    finalUrl = sanitizeUrl(finalUrl)
+  } catch (err: any) {
+    throw createError({
+      statusCode: 400,
+      message: 'Expanded URL is invalid or targets a blocked destination.',
+    })
+  }
+
   // Validate supported platform
   const platform = detectServerPlatform(finalUrl)
   if (!platform) {
@@ -89,6 +91,14 @@ export default defineEventHandler(async (event) => {
     })
   }
   const audioOnly = body.audioOnly === true
+
+  // Acquire download slot AFTER all validation passes — prevents slot leaks on bad input
+  if (!acquireDownloadSlot(ip)) {
+    throw createError({
+      statusCode: 429,
+      message: 'Too many simultaneous downloads. Please wait for a current download to finish.',
+    })
+  }
 
   try {
     const { process: child, filename, contentType } = streamVideo(finalUrl, formatId, audioOnly)
