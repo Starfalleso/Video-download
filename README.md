@@ -2,6 +2,7 @@
 
 A fast, privacy-first multi-platform video downloader built with **Nuxt 4** and **Nuxt UI v4**.
 
+[![Open Source](https://img.shields.io/badge/Open%20Source-100%25-brightgreen?logo=github&labelColor=020420)](https://github.com/Starfalleso/Video-download)
 [![Nuxt](https://img.shields.io/badge/Nuxt-4.x-00DC82?logo=nuxt&labelColor=020420)](https://nuxt.com)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-38BDF8?logo=tailwindcss&labelColor=020420)](https://tailwindcss.com)
 [![Ko-fi](https://img.shields.io/badge/Support-Ko--fi-FF5E5B?logo=ko-fi&labelColor=020420)](https://ko-fi.com/vag3d)
@@ -27,11 +28,16 @@ A fast, privacy-first multi-platform video downloader built with **Nuxt 4** and 
 
 ---
 
-## 🔒 Privacy
+## � Open Source & Safety
 
-> **Wipe-on-Refresh policy** — No database, no file storage, no cookies.
+This project is **100% open source**. Every line of code is publicly available — you can inspect, audit, fork, or self-host it yourself.
+
+🔗 **Source code:** [github.com/Starfalleso/Video-download](https://github.com/Starfalleso/Video-download)
+
+> **Wipe-on-Refresh policy** — No database, no file storage, no cookies, no tracking.
 > All downloads are streamed directly from `yt-dlp` stdout → HTTP response → your browser.
 > Session history and rate-limit state live in RAM and are wiped when the server restarts.
+> Don't take our word for it — read the code yourself.
 
 ---
 

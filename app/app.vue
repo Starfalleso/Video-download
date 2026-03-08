@@ -33,6 +33,14 @@ useSeoMeta({
       </template>
 
       <template #right>
+        <UButton
+          to="https://github.com/Starfalleso/Video-download"
+          target="_blank"
+          icon="i-simple-icons-github"
+          aria-label="GitHub"
+          color="neutral"
+          variant="ghost"
+        />
         <UColorModeButton />
       </template>
     </UHeader>
@@ -50,9 +58,20 @@ useSeoMeta({
       </template>
 
       <template #right>
-        <p class="text-sm text-muted">
-          © {{ new Date().getFullYear() }} Video Downloader
-        </p>
+        <div class="flex items-center gap-3">
+          <NuxtLink
+            to="https://github.com/Starfalleso/Video-download"
+            target="_blank"
+            class="text-sm text-muted hover:text-white transition-colors flex items-center gap-1"
+          >
+            <UIcon name="i-simple-icons-github" class="w-3.5 h-3.5" />
+            Open Source
+          </NuxtLink>
+          <span class="text-sm text-muted">·</span>
+          <p class="text-sm text-muted">
+            © {{ new Date().getFullYear() }} Video Downloader
+          </p>
+        </div>
       </template>
     </UFooter>
   </UApp>
