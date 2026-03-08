@@ -1,60 +1,90 @@
-# Nuxt Starter Template
+# 📥 Video Downloader
 
-[![Nuxt UI](https://img.shields.io/badge/Made%20with-Nuxt%20UI-00DC82?logo=nuxt&labelColor=020420)](https://ui.nuxt.com)
+A fast, privacy-first multi-platform video downloader built with **Nuxt 4** and **Nuxt UI v4**.
 
-Use this template to get started with [Nuxt UI](https://ui.nuxt.com) quickly.
+[![Nuxt](https://img.shields.io/badge/Nuxt-4.x-00DC82?logo=nuxt&labelColor=020420)](https://nuxt.com)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-38BDF8?logo=tailwindcss&labelColor=020420)](https://tailwindcss.com)
+[![Ko-fi](https://img.shields.io/badge/Support-Ko--fi-FF5E5B?logo=ko-fi&labelColor=020420)](https://ko-fi.com/vag3d)
 
-- [Live demo](https://starter-template.nuxt.dev/)
-- [Documentation](https://ui.nuxt.com/docs/getting-started/installation/nuxt)
+---
 
-<a href="https://starter-template.nuxt.dev/" target="_blank">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://ui.nuxt.com/assets/templates/nuxt/starter-dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="https://ui.nuxt.com/assets/templates/nuxt/starter-light.png">
-    <img alt="Nuxt Starter Template" src="https://ui.nuxt.com/assets/templates/nuxt/starter-light.png" width="830" height="466">
-  </picture>
-</a>
+## ✨ Features
 
-> The starter template for Vue is on https://github.com/nuxt-ui-templates/starter-vue.
+- **Multi-platform** — YouTube, TikTok, Instagram, Facebook, Twitter/X
+- **Video & Audio** — Download as MP4 or extract MP3 audio-only
+- **Format selector** — Choose quality with file size estimates
+- **Stream to device** — Files go straight to your browser, nothing saved on the server
+- **Clipboard paste** — One-click paste from clipboard
+- **URL shortener expansion** — Auto-expands bit.ly, t.co, vm.tiktok.com, fb.watch, etc.
+- **YouTube preview** — Click thumbnail to embed a preview player
+- **Session history** — In-memory download log, wiped on refresh
+- **Toast notifications** — Clean feedback for every action
+- **Animated background** — Floating gradient orbs
+- **Dark / Light mode** — Automatic or manual toggle
+- **Rate limiting** — 15 info requests / 5 downloads per minute per IP
+- **PWA ready** — Installable as a standalone app
+- **Ko-fi support popup** — Shows after each download to support the developer
 
-## Quick Start
+---
 
-```bash [Terminal]
-npm create nuxt@latest -- -t github:nuxt-ui-templates/starter
-```
+## 🔒 Privacy
 
-## Deploy your own
+> **Wipe-on-Refresh policy** — No database, no file storage, no cookies.
+> All downloads are streamed directly from `yt-dlp` stdout → HTTP response → your browser.
+> Session history and rate-limit state live in RAM and are wiped when the server restarts.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-name=starter&repository-url=https%3A%2F%2Fgithub.com%2Fnuxt-ui-templates%2Fstarter&demo-image=https%3A%2F%2Fui.nuxt.com%2Fassets%2Ftemplates%2Fnuxt%2Fstarter-dark.png&demo-url=https%3A%2F%2Fstarter-template.nuxt.dev%2F&demo-title=Nuxt%20Starter%20Template&demo-description=A%20minimal%20template%20to%20get%20started%20with%20Nuxt%20UI.)
+---
 
-## Setup
+## 🛠 Requirements
 
-Make sure to install the dependencies:
+- **Node.js** 18+
+- **[yt-dlp](https://github.com/yt-dlp/yt-dlp#installation)** installed and available in `PATH`
+  ```bash
+  # Windows (winget)
+  winget install yt-dlp
+
+  # macOS / Linux
+  brew install yt-dlp
+  # or
+  pip install yt-dlp
+  ```
+
+---
+
+## 🚀 Getting Started
+
+### Install dependencies
 
 ```bash
-pnpm install
+npm install
 ```
 
-## Development Server
-
-Start the development server on `http://localhost:3000`:
+### Start development server
 
 ```bash
-pnpm dev
+npm run dev
+# → http://localhost:3000
 ```
 
-## Production
-
-Build the application for production:
+### Build for production
 
 ```bash
-pnpm build
+npm run build
+npm run preview
 ```
 
-Locally preview production build:
+---
 
-```bash
-pnpm preview
-```
+## ⚙️ Configuration
 
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+| Environment Variable | Default   | Description                        |
+|----------------------|-----------|------------------------------------|
+| `YTDLP_PATH`         | `yt-dlp`  | Custom path to the yt-dlp binary   |
+
+---
+
+## ☕ Support
+
+If this tool saved you time, consider buying me a coffee!
+
+[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/vag3d)
