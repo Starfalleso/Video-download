@@ -62,7 +62,7 @@ This project is **100% open source**. Every line of code is publicly available â
 ### Install dependencies
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### Configure environment (optional)
@@ -75,16 +75,26 @@ cp .env.example .env
 ### Start development server
 
 ```bash
-npm run dev
+pnpm dev
 # â†’ http://localhost:3000
 ```
 
 ### Build for production
 
 ```bash
-npm run build
-npm run preview
+pnpm build
+pnpm preview
 ```
+
+### Typecheck and lint
+
+```bash
+pnpm typecheck
+pnpm lint
+```
+
+> This project uses `pnpm` (`packageManager` is set in `package.json`).
+> Commit `pnpm-lock.yaml` whenever dependencies change to keep CI green.
 
 ---
 

@@ -359,7 +359,7 @@ const embedUrl = computed(() => {
 function selectDefaultFormat() {
   const formats = activeFormats.value
   if (formats.length) {
-    selectedFormat.value = formats[0].id
+    selectedFormat.value = formats[0]?.id || ''
   }
 }
 
@@ -483,7 +483,7 @@ async function handleDownload() {
       let filename = audioOnly.value ? 'audio.mp3' : 'video.mp4'
       if (disposition) {
         const match = disposition.match(/filename\*?=(?:UTF-8''|"?)([^";]+)"?/i)
-        if (match) {
+        if (match?.[1]) {
           filename = decodeURIComponent(match[1])
         }
       }
