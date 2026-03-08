@@ -31,7 +31,14 @@ export interface VideoInfo {
   duration?: string
   formats: VideoFormat[]
   audioFormats: VideoFormat[]
+  sizeWarning?: string
 }
+
+/**
+ * Max download size in bytes (2 GB).
+ * Downloads above this are blocked server-side.
+ */
+export const MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024 * 1024
 
 /**
  * Format bytes into human-readable size
@@ -132,18 +139,29 @@ export async function getVideoInfo(url: string): Promise<VideoInfo> {
       : `${mins}:${String(secs).padStart(2, '0')}`
   }
 
+  // Check for oversized formats and add a warning
+  const ONE_GB = 1024 * 1024 * 1024
+  const hasLargeFormat = [...formats, ...audioFormats].some(f => f.filesize && f.filesize > ONE_GB)
+  const sizeWarning = hasLargeFormat
+    ? 'Some formats exceed 1 GB. Large files may take longer and use more bandwidth.'
+    : undefined
+
   return {
     title: data.title || 'Untitled Video',
     thumbnail: data.thumbnail,
     duration,
     formats: formats.slice(-8),
     audioFormats: audioFormats.slice(-6),
+    sizeWarning,
   }
 }
 
 /**
  * Stream video to a writable stream.
  * Outputs to stdout (-o -) so no temp files are created on disk.
+ *
+ * Includes a connection timeout: if no data is received within 30 seconds
+ * of starting (or 60 seconds of silence mid-stream), the process is killed.
  */
 export function streamVideo(url: string, formatId?: string, audioOnly?: boolean): {
   process: ReturnType<typeof spawn>
@@ -156,6 +174,8 @@ export function streamVideo(url: string, formatId?: string, audioOnly?: boolean)
     '--no-playlist',
     '--no-warnings',
     '--no-check-certificates',
+    '--socket-timeout', '30',         // yt-dlp network timeout
+    '--retries', '3',                 // yt-dlp built-in retries
   ]
 
   if (audioOnly) {
@@ -173,6 +193,33 @@ export function streamVideo(url: string, formatId?: string, audioOnly?: boolean)
 
   const child = spawn(ytdlp, args, {
     stdio: ['ignore', 'pipe', 'pipe'],
+  })
+
+  // ── Idle timeout: kill if no stdout data for 60 seconds ─────────
+  let idleTimer: ReturnType<typeof setTimeout> | null = null
+
+  const resetIdleTimer = () => {
+    if (idleTimer) clearTimeout(idleTimer)
+    idleTimer = setTimeout(() => {
+      console.warn('[streamVideo] Idle timeout — no data for 60s. Killing process.')
+      if (!child.killed) child.kill('SIGTERM')
+    }, 60_000)
+  }
+
+  // Start the initial timer (30s to receive first data)
+  idleTimer = setTimeout(() => {
+    console.warn('[streamVideo] Connection timeout — no data within 30s. Killing process.')
+    if (!child.killed) child.kill('SIGTERM')
+  }, 30_000)
+
+  // Reset timer on each data chunk
+  child.stdout?.on('data', () => {
+    resetIdleTimer()
+  })
+
+  // Clear timer when process ends
+  child.on('close', () => {
+    if (idleTimer) clearTimeout(idleTimer)
   })
 
   const timestamp = Date.now()

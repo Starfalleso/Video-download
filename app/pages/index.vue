@@ -394,23 +394,47 @@ async function handleFetch() {
   detectedPlatform.value = platform
   loading.value = true
 
-  try {
-    const data = await $fetch('/api/video/info', {
-      method: 'POST',
-      body: { url: trimmed },
-    })
+  // Auto-retry logic — up to 2 retries on network/server errors
+  const MAX_RETRIES = 2
+  let lastError: any = null
 
-    videoInfo.value = data as any
-    audioOnly.value = false
-    selectDefaultFormat()
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const data = await $fetch('/api/video/info', {
+        method: 'POST',
+        body: { url: trimmed },
+      })
 
-    toast.add({ title: 'Video found!', description: (data as any)?.title, icon: 'i-lucide-check-circle-2', color: 'success' })
-  } catch (err: any) {
-    const msg = err?.data?.message || err?.message || 'Failed to fetch video info.'
-    toast.add({ title: 'Fetch failed', description: msg, icon: 'i-lucide-triangle-alert', color: 'error' })
-  } finally {
-    loading.value = false
+      videoInfo.value = data as any
+      audioOnly.value = false
+      selectDefaultFormat()
+
+      // Show size warning if present
+      if ((data as any)?.sizeWarning) {
+        toast.add({ title: 'Size Warning', description: (data as any).sizeWarning, icon: 'i-lucide-alert-triangle', color: 'warning' })
+      }
+
+      toast.add({ title: 'Video found!', description: (data as any)?.title, icon: 'i-lucide-check-circle-2', color: 'success' })
+      lastError = null
+      break
+    } catch (err: any) {
+      lastError = err
+      // Don't retry on 4xx client errors (bad URL, unsupported, etc.)
+      const status = err?.data?.statusCode || err?.statusCode || 0
+      if (status >= 400 && status < 500) break
+      // Wait before retry
+      if (attempt < MAX_RETRIES) {
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)))
+      }
+    }
   }
+
+  if (lastError) {
+    const msg = lastError?.data?.message || lastError?.message || 'Failed to fetch video info.'
+    toast.add({ title: 'Fetch failed', description: msg, icon: 'i-lucide-triangle-alert', color: 'error' })
+  }
+
+  loading.value = false
 }
 
 async function handleDownload() {
@@ -418,61 +442,80 @@ async function handleDownload() {
 
   downloading.value = true
 
-  try {
-    const response = await $fetch.raw('/api/video/download', {
-      method: 'POST',
-      body: {
-        url: videoInfo.value.expandedUrl || url.value.trim(),
-        formatId: selectedFormat.value,
-        audioOnly: audioOnly.value,
-      },
-      responseType: 'blob',
-    })
+  // Auto-retry — up to 1 retry for downloads
+  const MAX_RETRIES = 1
+  let lastError: any = null
 
-    const blob = response._data as Blob
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await $fetch.raw('/api/video/download', {
+        method: 'POST',
+        body: {
+          url: videoInfo.value.expandedUrl || url.value.trim(),
+          formatId: selectedFormat.value,
+          audioOnly: audioOnly.value,
+        },
+        responseType: 'blob',
+      })
 
-    const disposition = response.headers.get('content-disposition')
-    let filename = audioOnly.value ? 'audio.mp3' : 'video.mp4'
-    if (disposition) {
-      const match = disposition.match(/filename\*?=(?:UTF-8''|"?)([^";]+)"?/i)
-      if (match) {
-        filename = decodeURIComponent(match[1])
+      const blob = response._data as Blob
+
+      const disposition = response.headers.get('content-disposition')
+      let filename = audioOnly.value ? 'audio.mp3' : 'video.mp4'
+      if (disposition) {
+        const match = disposition.match(/filename\*?=(?:UTF-8''|"?)([^";]+)"?/i)
+        if (match) {
+          filename = decodeURIComponent(match[1])
+        }
+      }
+
+      const blobUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = blobUrl
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+
+      setTimeout(() => {
+        URL.revokeObjectURL(blobUrl)
+        a.remove()
+      }, 1000)
+
+      // Add to session history
+      history.value.unshift({
+        title: videoInfo.value!.title,
+        thumbnail: videoInfo.value!.thumbnail,
+        platform: videoInfo.value!.platform || detectedPlatform.value?.name || 'Unknown',
+        type: audioOnly.value ? 'Audio (MP3)' : 'Video (MP4)',
+        time: new Date().toLocaleTimeString(),
+      })
+
+      toast.add({ title: 'Download started!', description: 'Check your downloads folder.', icon: 'i-lucide-download', color: 'success' })
+
+      // Show Ko-fi popup after download
+      setTimeout(() => {
+        showKofi.value = true
+      }, 2000)
+
+      lastError = null
+      break
+    } catch (err: any) {
+      lastError = err
+      const status = err?.data?.statusCode || err?.statusCode || 0
+      if (status >= 400 && status < 500) break // Don't retry client errors
+      if (attempt < MAX_RETRIES) {
+        toast.add({ title: 'Retrying download…', description: `Attempt ${attempt + 2}`, icon: 'i-lucide-refresh-cw', color: 'warning' })
+        await new Promise(r => setTimeout(r, 2000))
       }
     }
-
-    const blobUrl = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = blobUrl
-    a.download = filename
-    document.body.appendChild(a)
-    a.click()
-
-    setTimeout(() => {
-      URL.revokeObjectURL(blobUrl)
-      a.remove()
-    }, 1000)
-
-    // Add to session history
-    history.value.unshift({
-      title: videoInfo.value!.title,
-      thumbnail: videoInfo.value!.thumbnail,
-      platform: videoInfo.value!.platform || detectedPlatform.value?.name || 'Unknown',
-      type: audioOnly.value ? 'Audio (MP3)' : 'Video (MP4)',
-      time: new Date().toLocaleTimeString(),
-    })
-
-    toast.add({ title: 'Download started!', description: 'Check your downloads folder.', icon: 'i-lucide-download', color: 'success' })
-
-    // Show Ko-fi popup after download
-    setTimeout(() => {
-      showKofi.value = true
-    }, 2000)
-  } catch (err: any) {
-    const msg = err?.data?.message || err?.message || 'Download failed.'
-    toast.add({ title: 'Download failed', description: msg, icon: 'i-lucide-triangle-alert', color: 'error' })
-  } finally {
-    downloading.value = false
   }
+
+  if (lastError) {
+    const msg = lastError?.data?.message || lastError?.message || 'Download failed.'
+    toast.add({ title: 'Download failed', description: msg, icon: 'i-lucide-triangle-alert', color: 'error' })
+  }
+
+  downloading.value = false
 }
 </script>
 

@@ -9,8 +9,10 @@
  */
 import { detectServerPlatform, isValidServerUrl } from '~~/server/utils/validation'
 import { streamVideo } from '~~/server/utils/ytdlp'
-import { checkRateLimit } from '~~/server/utils/ratelimit'
+import { MAX_DOWNLOAD_BYTES } from '~~/server/utils/ytdlp'
+import { checkRateLimit, acquireDownloadSlot, releaseDownloadSlot } from '~~/server/utils/ratelimit'
 import { expandUrl, isShortUrl } from '~~/server/utils/urlexpander'
+import { sanitizeUrl, sanitizeFormatId } from '~~/server/utils/sanitize'
 
 export default defineEventHandler(async (event) => {
   // Rate limiting — 5 downloads per minute per IP
@@ -23,6 +25,14 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // Concurrent download limit — max 3 simultaneous downloads per IP
+  if (!acquireDownloadSlot(ip)) {
+    throw createError({
+      statusCode: 429,
+      message: 'Too many simultaneous downloads. Please wait for a current download to finish.',
+    })
+  }
+
   const body = await readBody<{ url?: string; formatId?: string; audioOnly?: boolean }>(event)
 
   if (!body?.url || typeof body.url !== 'string') {
@@ -32,7 +42,17 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const url = body.url.trim()
+  let url: string
+
+  // Sanitize input URL — blocks injection, private IPs, dangerous protocols
+  try {
+    url = sanitizeUrl(body.url)
+  } catch (err: any) {
+    throw createError({
+      statusCode: 400,
+      message: err.message || 'Invalid URL.',
+    })
+  }
 
   // Validate URL format
   if (!isValidServerUrl(url)) {
@@ -57,9 +77,17 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const formatId = body.formatId && typeof body.formatId === 'string'
-    ? body.formatId
-    : undefined
+  let formatId: string | undefined
+  try {
+    formatId = body.formatId && typeof body.formatId === 'string'
+      ? sanitizeFormatId(body.formatId)
+      : undefined
+  } catch (err: any) {
+    throw createError({
+      statusCode: 400,
+      message: err.message || 'Invalid format ID.',
+    })
+  }
   const audioOnly = body.audioOnly === true
 
   try {
@@ -83,6 +111,27 @@ export default defineEventHandler(async (event) => {
     // Return a promise that resolves when the stream ends
     return new Promise((resolve, reject) => {
       const nodeRes = event.node.res
+      let totalBytes = 0
+
+      // Track bytes and enforce max download size
+      child.stdout?.on('data', (chunk: Buffer) => {
+        totalBytes += chunk.length
+        if (totalBytes > MAX_DOWNLOAD_BYTES) {
+          console.warn(`[download] Max size exceeded (${totalBytes} bytes). Killing process.`)
+          child.kill('SIGTERM')
+          releaseDownloadSlot(ip)
+          if (!nodeRes.headersSent) {
+            reject(createError({
+              statusCode: 413,
+              message: 'Download exceeds maximum allowed size (2 GB).',
+            }))
+          } else {
+            nodeRes.end()
+            resolve(undefined)
+          }
+          return
+        }
+      })
 
       // Pipe yt-dlp stdout → HTTP response (RAM-only, no disk)
       child.stdout?.pipe(nodeRes)
@@ -90,10 +139,12 @@ export default defineEventHandler(async (event) => {
       child.stdout?.on('error', (err: Error) => {
         console.error('[download] stdout error:', err.message)
         child.kill('SIGTERM')
+        releaseDownloadSlot(ip)
         reject(createError({ statusCode: 500, message: 'Stream error.' }))
       })
 
       child.on('close', (code: number | null) => {
+        releaseDownloadSlot(ip)
         if (code === 0) {
           nodeRes.end()
           resolve(undefined)
@@ -113,6 +164,7 @@ export default defineEventHandler(async (event) => {
 
       child.on('error', (err: any) => {
         console.error('[download] process error:', err.message)
+        releaseDownloadSlot(ip)
         if (err.code === 'ENOENT') {
           reject(createError({
             statusCode: 500,
@@ -134,6 +186,7 @@ export default defineEventHandler(async (event) => {
       })
     })
   } catch (err: any) {
+    releaseDownloadSlot(ip)
     console.error('[/api/video/download] error:', err.message)
     throw createError({
       statusCode: 500,

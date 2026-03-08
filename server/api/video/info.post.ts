@@ -8,6 +8,7 @@ import { detectServerPlatform, isValidServerUrl } from '~~/server/utils/validati
 import { getVideoInfo } from '~~/server/utils/ytdlp'
 import { checkRateLimit } from '~~/server/utils/ratelimit'
 import { expandUrl, isShortUrl } from '~~/server/utils/urlexpander'
+import { sanitizeUrl } from '~~/server/utils/sanitize'
 
 export default defineEventHandler(async (event) => {
   // Rate limiting — 15 info requests per minute per IP
@@ -29,7 +30,17 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  let url = body.url.trim()
+  let url: string
+
+  // Sanitize input URL — blocks injection attempts, private IPs, and invalid protocols
+  try {
+    url = sanitizeUrl(body.url)
+  } catch (err: any) {
+    throw createError({
+      statusCode: 400,
+      message: err.message || 'Invalid URL.',
+    })
+  }
 
   // Validate URL format
   if (!isValidServerUrl(url)) {

@@ -1,5 +1,5 @@
 /**
- * Simple in-memory rate limiter.
+ * Simple in-memory rate limiter + concurrent download tracker.
  * No persistence — resets on server restart (volatile by design).
  */
 
@@ -9,6 +9,10 @@ interface RateLimitEntry {
 }
 
 const store = new Map<string, RateLimitEntry>()
+
+// ── Concurrent download tracking ─────────────────────────────────────
+const activeDownloads = new Map<string, number>()
+const MAX_CONCURRENT_DOWNLOADS = 3
 
 // Clean up expired entries every 60s
 setInterval(() => {
@@ -52,4 +56,36 @@ export function checkRateLimit(
     remaining: maxRequests - entry.count,
     retryAfterMs: 0,
   }
+}
+
+/**
+ * Acquire a download slot for an IP.
+ * Returns true if the slot was acquired, false if limit reached.
+ */
+export function acquireDownloadSlot(ip: string): boolean {
+  const current = activeDownloads.get(ip) || 0
+  if (current >= MAX_CONCURRENT_DOWNLOADS) {
+    return false
+  }
+  activeDownloads.set(ip, current + 1)
+  return true
+}
+
+/**
+ * Release a download slot for an IP.
+ */
+export function releaseDownloadSlot(ip: string): void {
+  const current = activeDownloads.get(ip) || 0
+  if (current <= 1) {
+    activeDownloads.delete(ip)
+  } else {
+    activeDownloads.set(ip, current - 1)
+  }
+}
+
+/**
+ * Get current active download count for an IP.
+ */
+export function getActiveDownloads(ip: string): number {
+  return activeDownloads.get(ip) || 0
 }

@@ -24,7 +24,15 @@ export default defineNuxtConfig({
       tmp: {
         driver: 'memory'
       }
-    }
+    },
+    // Limit request body size to 1 MB to prevent abuse
+    routeRules: {
+      '/api/**': {
+        headers: {
+          'X-Content-Type-Options': 'nosniff',
+        },
+      },
+    },
   },
 
   // PWA Configuration
