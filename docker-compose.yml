@@ -1,0 +1,16 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: video-downloader
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NITRO_PORT=3000
+      - NITRO_HOST=0.0.0.0
+      # Optional: set a custom yt-dlp binary path inside the container
+      # - YTDLP_PATH=/usr/bin/yt-dlp
+    restart: unless-stopped
+    # No volumes — all data is in-memory only (by design)

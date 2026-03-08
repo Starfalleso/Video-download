@@ -65,6 +65,13 @@ This project is **100% open source**. Every line of code is publicly available �
 npm install
 ```
 
+### Configure environment (optional)
+
+```bash
+cp .env.example .env
+# Edit .env if yt-dlp is not in your PATH
+```
+
 ### Start development server
 
 ```bash
@@ -81,11 +88,38 @@ npm run preview
 
 ---
 
+## 🐳 Docker (Self-hosting)
+
+The easiest way to self-host. Docker handles Node.js, yt-dlp, and ffmpeg automatically.
+
+### Quick start
+
+```bash
+docker compose up -d
+# → http://localhost:3000
+```
+
+### Build manually
+
+```bash
+docker build -t video-downloader .
+docker run -p 3000:3000 video-downloader
+```
+
+> **Note:** No volumes are mounted — all download data is streamed through RAM and never written to disk.
+
+---
+
 ## ⚙️ Configuration
 
-| Environment Variable | Default   | Description                        |
-|----------------------|-----------|------------------------------------|
-| `YTDLP_PATH`         | `yt-dlp`  | Custom path to the yt-dlp binary   |
+| Environment Variable | Default    | Description                              |
+|----------------------|------------|------------------------------------------|
+| `YTDLP_PATH`         | `yt-dlp`   | Custom path to the yt-dlp binary         |
+| `NITRO_PORT`         | `3000`     | Port the server listens on               |
+| `NITRO_HOST`         | `0.0.0.0`  | Host binding (use `0.0.0.0` for Docker)  |
+| `NODE_ENV`           | (dev mode) | Set to `production` for prod deployments |
+
+Copy `.env.example` to `.env` to override any of these locally.
 
 ---
 

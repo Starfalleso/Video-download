@@ -14,7 +14,7 @@
     >
       <template #top>
         <!-- Platform Icons -->
-        <div class="flex items-center justify-center gap-4 mb-4">
+        <div class="w-full flex items-center justify-center gap-4 mb-4">
           <div
             v-for="p in SUPPORTED_PLATFORMS"
             :key="p.name"
@@ -244,6 +244,25 @@
             </template>
           </UCard>
         </Transition>
+        <!-- Ko-fi Support Banner (always visible) -->
+        <div class="mt-8 rounded-xl border border-pink-500/20 bg-pink-500/5 p-5 text-center">
+          <div class="flex items-center justify-center gap-2 mb-2">
+            <UIcon name="i-lucide-heart" class="w-5 h-5 text-pink-500" />
+            <span class="font-semibold">Support this project</span>
+          </div>
+          <p class="text-muted text-sm mb-4">
+            This tool is free, open-source, and stores zero data. If you find it useful, consider buying me a coffee!
+          </p>
+          <UButton
+            to="https://ko-fi.com/vag3d"
+            target="_blank"
+            size="lg"
+            icon="i-simple-icons-kofi"
+            class="!bg-[#FF5E5B] hover:!bg-[#e04e4b] !text-white !border-none"
+          >
+            Support on Ko-fi
+          </UButton>
+        </div>
       </UContainer>
     </UPageSection>
 
